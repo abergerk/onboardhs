@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stocks</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<style>
+  :root {
+    --bg: #fafafa;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #71717a;
+    --border: #e4e4e7;
+    --up: #067647;
+    --up-bg: #ecfdf3;
+    --down: #b42318;
+    --down-bg: #fef3f2;
+    --accent: #3538cd;
+    --accent-bg: #eef4ff;
+    --warn-bg: #fffaeb;
+    --warn: #b54708;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101014;
+      --card: #18181d;
+      --text: #ececf1;
+      --muted: #8e8e99;
+      --border: #2a2a32;
+      --up: #4ade80;
+      --up-bg: #0c2b1c;
+      --down: #f87171;
+      --down-bg: #341418;
+      --accent: #a5b4fc;
+      --accent-bg: #1e2140;
+      --warn-bg: #302608;
+      --warn: #fbbf24;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 28px 16px 64px; }
+
+  header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px; }
+  h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+  #asof { color: var(--muted); font-size: 12.5px; }
+  #bell {
+    margin-left: auto; border: 1px solid var(--border); background: var(--card);
+    color: var(--muted); border-radius: 8px; padding: 5px 11px; font-size: 12.5px;
+    cursor: pointer;
+  }
+  #bell.on { color: var(--accent); border-color: var(--accent); }
+
+  .addbar { position: relative; margin-bottom: 18px; }
+  #symInput {
+    width: 100%; padding: 10px 14px; font-size: 15px; color: var(--text);
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    outline: none;
+  }
+  #symInput:focus { border-color: var(--accent); }
+  #suggest {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 10;
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.12); display: none;
+  }
+  #suggest button {
+    display: flex; gap: 10px; align-items: baseline; width: 100%; text-align: left;
+    padding: 9px 14px; border: 0; background: none; color: var(--text);
+    font: inherit; cursor: pointer;
+  }
+  #suggest button:hover, #suggest button.sel { background: var(--accent-bg); }
+  #suggest .sname { color: var(--muted); font-size: 13px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  #suggest .sexch { margin-left: auto; color: var(--muted); font-size: 11.5px; }
+
+  .stock {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    margin-bottom: 10px; overflow: hidden;
+  }
+  .row {
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 16px;
+    padding: 13px 16px; cursor: pointer; user-select: none;
+  }
+  .sym { font-weight: 650; font-size: 15.5px; letter-spacing: 0.01em; }
+  .name { color: var(--muted); font-size: 12.5px; grid-row: 2; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .price { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .chg {
+    grid-column: 2; text-align: right; font-size: 13px; font-weight: 600;
+    font-variant-numeric: tabular-nums; border-radius: 6px; justify-self: end;
+    padding: 0 6px;
+  }
+  .chg.up { color: var(--up); background: var(--up-bg); }
+  .chg.down { color: var(--down); background: var(--down-bg); }
+  .badges { grid-column: 1 / -1; display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .badge {
+    font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-bg); color: var(--accent);
+  }
+  .badge.soon { background: var(--warn-bg); color: var(--warn); }
+
+  .detail { display: none; border-top: 1px solid var(--border); padding: 14px 16px 16px; }
+  .stock.open .detail { display: block; }
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px 18px; margin-bottom: 6px;
+  }
+  .stat .k { color: var(--muted); font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: 0.05em; }
+  .stat .v { font-size: 14px; font-weight: 550; font-variant-numeric: tabular-nums; }
+
+  .newshead { color: var(--muted); font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: 0.05em; margin: 16px 0 6px; }
+  .news a {
+    display: block; color: var(--text); text-decoration: none; padding: 6px 0;
+    border-top: 1px solid var(--border); font-size: 13.5px;
+  }
+  .news a:hover .t { text-decoration: underline; }
+  .news .m { color: var(--muted); font-size: 12px; }
+
+  .rm {
+    margin-top: 14px; border: 0; background: none; color: var(--muted);
+    font-size: 12.5px; cursor: pointer; padding: 0;
+  }
+  .rm:hover { color: var(--down); }
+
+  #empty { color: var(--muted); text-align: center; padding: 48px 0; }
+  #banner {
+    display: none; background: var(--warn-bg); color: var(--warn);
+    border-radius: 10px; padding: 9px 14px; font-size: 13px; margin-bottom: 14px;
+  }
+
+  #toasts { position: fixed; bottom: 18px; right: 18px; display: flex;
+    flex-direction: column; gap: 8px; z-index: 50; max-width: 320px; }
+  .toast {
+    background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 10px; padding: 10px 14px; font-size: 13.5px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15); animation: pop .18s ease-out;
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } }
+
+  footer { margin-top: 28px; color: var(--muted); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Stocks</h1>
+    <span id="asof"></span>
+    <button id="bell" title="Earnings reminders: notified 7, 3 and 1 day(s) before, and on the day">🔔 Alerts off</button>
+  </header>
+
+  <div id="banner"></div>
+
+  <div class="addbar">
+    <input id="symInput" placeholder="Add symbol or company (e.g. AAPL)" autocomplete="off" spellcheck="false">
+    <div id="suggest"></div>
+  </div>
+
+  <div id="list"></div>
+  <div id="empty" hidden>No stocks yet — add one above.</div>
+
+  <footer>Data via Yahoo Finance · quotes refresh every minute · earnings alerts fire 7, 3, 1 day(s) before and on the day (while this page is open)</footer>
+</div>
+<div id="toasts"></div>
+
+<script>
+'use strict';
+
+/* ------------------------------- state ---------------------------------- */
+
+const store = {
+  get watchlist() { return JSON.parse(localStorage.getItem('watchlist') || 'null') || ['AAPL', 'MSFT', 'NVDA']; },
+  set watchlist(v) { localStorage.setItem('watchlist', JSON.stringify(v)); },
+  get sent() { return JSON.parse(localStorage.getItem('sentAlerts') || '{}'); },
+  set sent(v) { localStorage.setItem('sentAlerts', JSON.stringify(v)); },
+  get notif() { return localStorage.getItem('notif') === '1'; },
+  set notif(v) { localStorage.setItem('notif', v ? '1' : '0'); },
+};
+
+let quotes = {};          // symbol -> quote
+const openSet = new Set();  // expanded rows
+const newsCache = {};       // symbol -> {t, items}
+
+const $ = (s, el) => (el || document).querySelector(s);
+const list = $('#list');
+
+/* ----------------------------- formatting ------------------------------- */
+
+const fmtPrice = (n, ccy) => n == null ? '—'
+  : new Intl.NumberFormat(undefined, { style: 'currency', currency: ccy || 'USD',
+      minimumFractionDigits: 2, maximumFractionDigits: n < 10 ? 4 : 2 }).format(n);
+const fmtNum = (n, d = 2) => n == null ? '—'
+  : new Intl.NumberFormat(undefined, { maximumFractionDigits: d }).format(n);
+const fmtCompact = (n) => n == null ? '—'
+  : new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 2 }).format(n);
+const fmtPct = (n) => n == null ? '—' : (n > 0 ? '+' : '') + n.toFixed(2) + '%';
+const fmtDate = (ms) => new Date(ms).toLocaleDateString(undefined,
+  { weekday: 'short', month: 'short', day: 'numeric' });
+const fmtAgo = (ms) => {
+  const h = Math.round((Date.now() - ms) / 3600e3);
+  if (h < 1) return 'just now';
+  if (h < 24) return h + 'h ago';
+  return Math.round(h / 24) + 'd ago';
+};
+
+function daysUntil(ms) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const then = new Date(ms); then.setHours(0, 0, 0, 0);
+  return Math.round((then - today) / 86400e3);
+}
+
+/* ------------------------------ rendering ------------------------------- */
+
+function render() {
+  const syms = store.watchlist;
+  $('#empty').hidden = syms.length > 0;
+  list.replaceChildren(...syms.map(renderStock));
+}
+
+function renderStock(sym) {
+  const q = quotes[sym];
+  const el = document.createElement('div');
+  el.className = 'stock' + (openSet.has(sym) ? ' open' : '');
+  el.dataset.sym = sym;
+
+  const chg = q?.regularMarketChangePercent;
+  const dir = chg == null ? '' : chg >= 0 ? 'up' : 'down';
+
+  let badges = '';
+  if (q?.earningsDate) {
+    const d = daysUntil(q.earningsDate);
+    if (d >= 0 && d <= 90) {
+      const label = d === 0 ? 'Earnings today' : d === 1 ? 'Earnings tomorrow'
+        : `Earnings ${fmtDate(q.earningsDate)} · ${d}d`;
+      badges += `<span class="badge${d <= 7 ? ' soon' : ''}">${label}${q.earningsEstimated ? ' (est.)' : ''}</span>`;
+    }
+  }
+
+  el.innerHTML = `
+    <div class="row">
+      <span class="sym">${sym}</span>
+      <span class="price">${fmtPrice(q?.regularMarketPrice, q?.currency)}</span>
+      <span class="name">${q?.shortName || q?.longName || ''}</span>
+      <span class="chg ${dir}">${fmtPct(chg)}</span>
+      ${badges ? `<div class="badges">${badges}</div>` : ''}
+    </div>
+    <div class="detail"></div>`;
+
+  el.querySelector('.row').addEventListener('click', () => toggle(sym, el));
+  if (openSet.has(sym)) fillDetail(sym, el);
+  return el;
+}
+
+function toggle(sym, el) {
+  if (openSet.has(sym)) { openSet.delete(sym); el.classList.remove('open'); return; }
+  openSet.add(sym);
+  el.classList.add('open');
+  fillDetail(sym, el);
+}
+
+function fillDetail(sym, el) {
+  const q = quotes[sym] || {};
+  const stats = [
+    ['Open', fmtPrice(q.regularMarketOpen, q.currency)],
+    ['Prev close', fmtPrice(q.regularMarketPreviousClose, q.currency)],
+    ['Day range', q.regularMarketDayLow != null
+      ? `${fmtNum(q.regularMarketDayLow)} – ${fmtNum(q.regularMarketDayHigh)}` : '—'],
+    ['52-wk range', q.fiftyTwoWeekLow != null
+      ? `${fmtNum(q.fiftyTwoWeekLow)} – ${fmtNum(q.fiftyTwoWeekHigh)}` : '—'],
+    ['Volume', fmtCompact(q.regularMarketVolume)],
+    ['Avg volume', fmtCompact(q.averageDailyVolume3Month)],
+    ['Market cap', fmtCompact(q.marketCap)],
+    ['P/E (ttm)', fmtNum(q.trailingPE)],
+    ['EPS (ttm)', fmtNum(q.epsTrailingTwelveMonths)],
+    ['Div yield', q.trailingAnnualDividendYield != null
+      ? fmtPct(q.trailingAnnualDividendYield * 100).replace('+', '') : '—'],
+    ['Earnings', q.earningsDate
+      ? fmtDate(q.earningsDate) + (q.earningsEstimated ? ' (est.)' : '') : '—'],
+  ];
+  el.querySelector('.detail').innerHTML = `
+    <div class="stats">${stats.map(([k, v]) =>
+      `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}
+    </div>
+    <div class="newshead">News</div>
+    <div class="news">Loading…</div>
+    <button class="rm">Remove ${sym} from watchlist</button>`;
+  el.querySelector('.rm').addEventListener('click', () => removeSymbol(sym));
+  loadNews(sym, el.querySelector('.news'));
+}
+
+async function loadNews(sym, target) {
+  try {
+    let entry = newsCache[sym];
+    if (!entry || Date.now() - entry.t > 5 * 60e3) {
+      const r = await fetch('/api/news?symbol=' + encodeURIComponent(sym));
+      const data = await r.json();
+      entry = newsCache[sym] = { t: Date.now(), items: data.news || [] };
+    }
+    if (!entry.items.length) { target.textContent = 'No recent news.'; return; }
+    target.innerHTML = entry.items.slice(0, 6).map((n) =>
+      `<a href="${n.link}" target="_blank" rel="noopener">
+         <span class="t">${escapeHtml(n.title)}</span><br>
+         <span class="m">${escapeHtml(n.publisher || '')}${n.time ? ' · ' + fmtAgo(n.time) : ''}</span>
+       </a>`).join('');
+  } catch { target.textContent = 'Couldn’t load news.'; }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ------------------------------- quotes --------------------------------- */
+
+async function refresh() {
+  const syms = store.watchlist;
+  if (!syms.length) { render(); return; }
+  try {
+    const r = await fetch('/api/quotes?symbols=' + encodeURIComponent(syms.join(',')));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    for (const q of data.quotes || []) quotes[q.symbol] = q;
+    $('#asof').textContent = new Date(data.asOf).toLocaleTimeString(undefined,
+      { hour: '2-digit', minute: '2-digit' }) + (data.demo ? ' · demo data' : '');
+    $('#banner').style.display = 'none';
+    checkEarningsAlerts();
+  } catch (e) {
+    const b = $('#banner');
+    b.textContent = 'Couldn’t reach quote service — showing last known data.';
+    b.style.display = 'block';
+  }
+  render();
+}
+
+/* -------------------------- earnings reminders --------------------------- */
+// Fires at most one reminder per stage per earnings date, at 7, 3 and 1
+// day(s) before plus on the day itself. Catches up if the app was closed:
+// only the closest applicable stage fires, earlier ones are marked as sent.
+
+const STAGES = [
+  { days: 7, msg: (s, d) => `${s} reports earnings in one week (${fmtDate(d)})` },
+  { days: 3, msg: (s, d) => `${s} reports earnings in 3 days (${fmtDate(d)})` },
+  { days: 1, msg: (s) => `${s} reports earnings tomorrow` },
+  { days: 0, msg: (s) => `${s} reports earnings today` },
+];
+
+function checkEarningsAlerts() {
+  const sent = store.sent;
+  let changed = false;
+  for (const sym of store.watchlist) {
+    const q = quotes[sym];
+    if (!q?.earningsDate) continue;
+    const d = daysUntil(q.earningsDate);
+    if (d < 0 || d > 7) continue;
+    const applicable = STAGES.filter((st) => d <= st.days);
+    if (!applicable.length) continue;
+    const fire = applicable[applicable.length - 1]; // closest stage only
+    const dateKey = new Date(q.earningsDate).toISOString().slice(0, 10);
+    for (const st of applicable) {
+      const key = `${sym}|${dateKey}|${st.days}`;
+      if (sent[key]) continue;
+      sent[key] = true; changed = true;
+      if (st === fire) notify(fire.msg(sym, q.earningsDate));
+    }
+  }
+  // prune keys older than ~120 days so localStorage doesn't grow forever
+  const cutoff = new Date(Date.now() - 120 * 86400e3).toISOString().slice(0, 10);
+  for (const k of Object.keys(sent)) {
+    if ((k.split('|')[1] || '') < cutoff) { delete sent[k]; changed = true; }
+  }
+  if (changed) store.sent = sent;
+}
+
+function notify(text) {
+  toast(text);
+  if (store.notif && 'Notification' in window && Notification.permission === 'granted') {
+    try { new Notification('Earnings reminder', { body: text, icon: undefined }); } catch {}
+  }
+}
+
+function toast(text) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = text;
+  $('#toasts').appendChild(t);
+  setTimeout(() => t.remove(), 12000);
+}
+
+/* --------------------------- notification bell --------------------------- */
+
+const bell = $('#bell');
+function renderBell() {
+  const on = store.notif && (!('Notification' in window) || Notification.permission === 'granted');
+  bell.classList.toggle('on', on);
+  bell.textContent = on ? '🔔 Alerts on' : '🔔 Alerts off';
+}
+bell.addEventListener('click', async () => {
+  if (store.notif) { store.notif = false; }
+  else {
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      const p = await Notification.requestPermission();
+      if (p !== 'granted') {
+        toast('Notifications blocked by browser — in-app reminders still work.');
+      }
+    }
+    store.notif = true;
+  }
+  renderBell();
+});
+
+/* ----------------------------- add / remove ------------------------------ */
+
+function addSymbol(sym) {
+  sym = sym.trim().toUpperCase();
+  if (!sym) return;
+  const wl = store.watchlist;
+  if (!wl.includes(sym)) { wl.push(sym); store.watchlist = wl; }
+  input.value = '';
+  hideSuggest();
+  refresh();
+}
+
+function removeSymbol(sym) {
+  store.watchlist = store.watchlist.filter((s) => s !== sym);
+  openSet.delete(sym);
+  delete quotes[sym];
+  render();
+}
+
+/* ---------------------------- symbol search ------------------------------ */
+
+const input = $('#symInput');
+const suggest = $('#suggest');
+let suggestions = [];
+let selIdx = -1;
+let searchTimer;
+
+input.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const q = input.value.trim();
+  if (!q) return hideSuggest();
+  searchTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('/api/search?q=' + encodeURIComponent(q));
+      const data = await r.json();
+      suggestions = (data.results || []).slice(0, 6);
+      selIdx = -1;
+      if (!suggestions.length) return hideSuggest();
+      suggest.innerHTML = suggestions.map((s, i) =>
+        `<button data-i="${i}"><b>${escapeHtml(s.symbol)}</b>
+           <span class="sname">${escapeHtml(s.name)}</span>
+           <span class="sexch">${escapeHtml(s.exchange)}</span></button>`).join('');
+      suggest.style.display = 'block';
+      suggest.querySelectorAll('button').forEach((b) =>
+        b.addEventListener('click', () => addSymbol(suggestions[+b.dataset.i].symbol)));
+    } catch { hideSuggest(); }
+  }, 250);
+});
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (selIdx >= 0 && suggestions[selIdx]) addSymbol(suggestions[selIdx].symbol);
+    else addSymbol(input.value);
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const n = suggestions.length;
+    if (!n) return;
+    selIdx = (selIdx + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
+    suggest.querySelectorAll('button').forEach((b, i) =>
+      b.classList.toggle('sel', i === selIdx));
+  } else if (e.key === 'Escape') hideSuggest();
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.addbar')) hideSuggest();
+});
+
+function hideSuggest() { suggest.style.display = 'none'; suggestions = []; selIdx = -1; }
+
+/* -------------------------------- boot ----------------------------------- */
+
+renderBell();
+render();
+refresh();
+setInterval(refresh, 60e3);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refresh();
+});
+</script>
+</body>
+</html>
