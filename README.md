@@ -29,6 +29,21 @@ node server.js
 Open http://localhost:3000, add your tickers, and click the 🔔 to allow
 notifications. Keep the tab open (pinned tabs work great) so reminders can fire.
 
+### Open it on your phone
+
+1. Start the server on your computer (command above) and leave it running.
+2. Make sure your phone is on the **same Wi-Fi** as the computer.
+3. The server prints an `on your phone: http://192.168.x.x:3000` line at
+   startup — type that address into your phone's browser.
+4. Optional: use your browser's **Add to Home Screen** (share menu on iPhone,
+   ⋮ menu on Android) to get an app icon that opens full-screen.
+
+Heads-up: on the phone you get the full app — live quotes, news, earnings
+badges and in-app reminder banners. *System* push notifications are the one
+thing phones reserve for HTTPS sites, so for those keep the tab open on your
+computer, or put the app behind HTTPS (e.g. a free [Tailscale](https://tailscale.com)
+or [ngrok](https://ngrok.com) tunnel, or host it on a service like Render/Fly).
+
 ### Demo mode
 
 No network / just want to try it? Synthetic data with earnings staged 0–26

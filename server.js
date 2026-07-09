@@ -11,6 +11,7 @@
 
 const http = require('http');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -262,6 +263,7 @@ const MIME = {
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml',
+  '.webmanifest': 'application/manifest+json',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
 };
@@ -332,7 +334,13 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(
-    `Stock tracker running at http://localhost:${PORT}${DEMO ? '  (demo mode — synthetic data)' : ''}`
-  );
+  console.log(`Stock tracker running${DEMO ? ' (demo mode — synthetic data)' : ''}:`);
+  console.log(`  this computer:  http://localhost:${PORT}`);
+  for (const ifaces of Object.values(os.networkInterfaces())) {
+    for (const i of ifaces || []) {
+      if (i.family === 'IPv4' && !i.internal) {
+        console.log(`  on your phone:  http://${i.address}:${PORT}  (same Wi-Fi)`);
+      }
+    }
+  }
 });
