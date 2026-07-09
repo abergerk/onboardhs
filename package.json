@@ -1,0 +1,14 @@
+{
+  "name": "stocks",
+  "version": "1.0.0",
+  "description": "Minimalist stock watchlist with earnings reminders, fed by Yahoo Finance",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "demo": "node server.js --demo"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Stocks",
+  "short_name": "Stocks",
+  "description": "Minimalist stock watchlist with earnings reminders",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101014",
+  "theme_color": "#101014",
+  "icons": [
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
